@@ -2,6 +2,8 @@
 """
 HTML 报告生成模块：单项目学习报告
 对应原 JS 版 roadshow_analyzer/pipeline.js 中的 esc / fmtDur / paragraphs / generateProjectHtml
+
+新增：图片灯箱查看器（点击放大后，可用左右箭头或键盘方向键切换上一张/下一张）
 """
 import re
 
@@ -55,6 +57,71 @@ def paragraphs(text: str) -> list:
 
 
 # ---------------------------------------------------------------------------
+# 图片灯箱查看器（HTML + CSS + JS）
+# ---------------------------------------------------------------------------
+_LIGHTBOX_HTML = """<div id="lightbox" class="lightbox">
+  <button class="close" onclick="closeLightbox()" aria-label="关闭">&times;</button>
+  <span class="nav prev" onclick="prevImage()" aria-label="上一张">&#10094;</span>
+  <img id="lightbox-img" src="" alt="">
+  <span class="nav next" onclick="nextImage()" aria-label="下一张">&#10095;</span>
+  <div class="cap" id="lightbox-caption"></div>
+  <div class="cnt" id="lightbox-count"></div>
+</div>
+<script>
+var lbItems = [];
+var lbIndex = 0;
+
+function openLightbox(img) {
+  lbItems = Array.prototype.slice.call(document.querySelectorAll('.slide img'));
+  lbIndex = lbItems.indexOf(img);
+  if (lbIndex < 0) return;
+  showLightbox(lbIndex);
+}
+
+function showLightbox(i) {
+  if (!lbItems.length) return;
+  lbIndex = (i + lbItems.length) % lbItems.length;
+  var img = document.getElementById('lightbox-img');
+  img.src = lbItems[lbIndex].src;
+  var fig = lbItems[lbIndex].closest('figure');
+  var cap = fig ? fig.querySelector('figcaption') : null;
+  document.getElementById('lightbox-caption').textContent = cap ? cap.textContent : '';
+  document.getElementById('lightbox-count').textContent = (lbIndex + 1) + ' / ' + lbItems.length;
+  document.getElementById('lightbox').classList.add('show');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('show');
+}
+
+function prevImage() { showLightbox(lbIndex - 1); }
+function nextImage() { showLightbox(lbIndex + 1); }
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeLightbox(); }
+  else if (e.key === 'ArrowLeft') { prevImage(); }
+  else if (e.key === 'ArrowRight') { nextImage(); }
+});
+
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) { closeLightbox(); }
+});
+</script>"""
+
+_LIGHTBOX_CSS = """/* 灯箱查看器（点击放大 + 左右箭头/键盘切换上一张下一张） */
+.lightbox{{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;z-index:2000;align-items:center;justify-content:center;flex-direction:column}}
+.lightbox.show{{display:flex}}
+.lightbox img{{max-width:90vw;max-height:78vh;border-radius:6px;object-fit:contain;box-shadow:0 0 30px rgba(0,0,0,.6)}}
+.lightbox .cap{{color:#fff;text-align:center;margin-top:12px;font-size:14px;max-width:80vw}}
+.lightbox .cnt{{color:#bbb;font-size:12px;margin-top:4px}}
+.lightbox .nav{{position:fixed;top:50%;transform:translateY(-50%);font-size:44px;color:#fff;cursor:pointer;user-select:none;background:rgba(255,255,255,.15);border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;transition:background .2s}}
+.lightbox .nav:hover{{background:rgba(255,255,255,.35)}}
+.lightbox .prev{{left:18px}}
+.lightbox .next{{right:18px}}
+.lightbox .close{{position:fixed;top:12px;right:22px;font-size:40px;color:#fff;cursor:pointer;line-height:1;background:none;border:none;z-index:2001}}"""
+
+
+# ---------------------------------------------------------------------------
 # 单项目 HTML 学习报告
 # ---------------------------------------------------------------------------
 def generate_project_html(proj_name: str, data: dict) -> str:
@@ -73,12 +140,12 @@ def generate_project_html(proj_name: str, data: dict) -> str:
     review = data.get("review") or {}
     has_text = data.get("hasText", False)
 
-    # ---- 照片网格 ----
+    # ---- 照片网格（点击打开灯箱） ----
     photo_html = ""
     for p in data.get("photos") or []:
         photo_html += (
             f'<figure class="slide"><img src="{p.get("src", "")}" loading="lazy" '
-            f'onclick="this.classList.toggle(\'expand\')">'
+            f'onclick="openLightbox(this)" alt="">'
             f'<figcaption>{esc(p.get("theme", ""))}<br>'
             f'<span class="role">[{esc(p.get("slide_role", ""))}]</span></figcaption></figure>\n'
         )
@@ -208,7 +275,7 @@ def generate_project_html(proj_name: str, data: dict) -> str:
             f'<div class="fulltext">{text_html}</div></section>'
         )
 
-    # ---- 组装 HTML 模板（CSS 与原 JS 版完全一致） ----
+    # ---- 组装 HTML 模板（含灯箱查看器） ----
     return f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{esc(proj_name)} - 路演学习分析</title>
 <style>
@@ -221,7 +288,7 @@ section{{background:#fff;border-radius:12px;padding:22px 26px;margin-bottom:18px
 section h2{{font-size:18px;color:#1e3a5f;border-left:4px solid #3b6ea5;padding-left:10px;margin:0 0 14px}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}}
 .slide img{{width:100%;border-radius:8px;border:1px solid #ddd;cursor:zoom-in;max-height:300px;object-fit:contain}}
-.slide img.expand{{position:fixed;inset:20px;width:auto;height:auto;max-width:92vw;max-height:90vh;margin:auto;z-index:1000;box-shadow:0 0 0 100vmax rgba(0,0,0,.75)}}
+{_LIGHTBOX_CSS}
 .slide figcaption{{font-size:12px;color:#555;margin-top:4px}}.slide .role{{color:#999;font-size:11px}}
 .chip{{display:inline-block;background:#eef3fb;color:#3b6ea5;border-radius:12px;padding:1px 10px;font-size:12px;margin:2px}}
 .stats{{display:flex;gap:20px;flex-wrap:wrap}}.stat b{{font-size:22px;color:#1e3a5f}}.stat{{font-size:12px;color:#666}}
@@ -247,6 +314,7 @@ a.back{{display:inline-block;margin-bottom:14px;color:#3b6ea5;font-size:13px;tex
 {speech_section}
 
 {fulltext_section}
+{_LIGHTBOX_HTML}
 </div></body></html>"""
 
 
@@ -255,10 +323,11 @@ if __name__ == "__main__":
     sample = {
         "text": "大家好，这是我们项目的介绍。我们的解决方案是XXX。谢谢大家，请各位评委提问。",
         "qa": "问：成本多少？答：很低。",
-        "photos": [{"src": "../test/a.jpg", "theme": "封面", "slide_role": "封面"}],
+        "photos": [{"src": "../test/a.jpg", "theme": "封面", "slide_role": "封面"},
+                   {"src": "../test/b.jpg", "theme": "产品", "slide_role": "产品展示"}],
         "speechStyle": {"cpm": 180, "durationSec": 75, "totalChars": 225,
                         "transitions": {"那么": 1}, "topWords": [{"word": "项目", "count": 3}]},
-        "pptStyle": {"slideCount": 1, "structure": {"封面": 1},
+        "pptStyle": {"slideCount": 2, "structure": {"封面": 1},
                      "pageTypes": {"标题页": 1}, "dataDensity": 0},
         "review": {"rating": 4, "summary": "测试点评。",
                    "five_dimensions": {"赛道空间": 4, "技术壁垒": 3, "临床验证": 3, "商业模式": 4, "团队实力": 4},

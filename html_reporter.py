@@ -109,16 +109,16 @@ document.getElementById('lightbox').addEventListener('click', function(e) {
 </script>"""
 
 _LIGHTBOX_CSS = """/* 灯箱查看器（点击放大 + 左右箭头/键盘切换上一张下一张） */
-.lightbox{{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;z-index:2000;align-items:center;justify-content:center;flex-direction:column}}
-.lightbox.show{{display:flex}}
-.lightbox img{{max-width:90vw;max-height:78vh;border-radius:6px;object-fit:contain;box-shadow:0 0 30px rgba(0,0,0,.6)}}
-.lightbox .cap{{color:#fff;text-align:center;margin-top:12px;font-size:14px;max-width:80vw}}
-.lightbox .cnt{{color:#bbb;font-size:12px;margin-top:4px}}
-.lightbox .nav{{position:fixed;top:50%;transform:translateY(-50%);font-size:44px;color:#fff;cursor:pointer;user-select:none;background:rgba(255,255,255,.15);border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;transition:background .2s}}
-.lightbox .nav:hover{{background:rgba(255,255,255,.35)}}
-.lightbox .prev{{left:18px}}
-.lightbox .next{{right:18px}}
-.lightbox .close{{position:fixed;top:12px;right:22px;font-size:40px;color:#fff;cursor:pointer;line-height:1;background:none;border:none;z-index:2001}}"""
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;z-index:2000;align-items:center;justify-content:center;flex-direction:column}
+.lightbox.show{display:flex}
+.lightbox img{max-width:90vw;max-height:78vh;border-radius:6px;object-fit:contain;box-shadow:0 0 30px rgba(0,0,0,.6)}
+.lightbox .cap{color:#fff;text-align:center;margin-top:12px;font-size:14px;max-width:80vw}
+.lightbox .cnt{color:#bbb;font-size:12px;margin-top:4px}
+.lightbox .nav{position:fixed;top:50%;transform:translateY(-50%);font-size:44px;color:#fff;cursor:pointer;user-select:none;background:rgba(255,255,255,.15);border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.lightbox .nav:hover{background:rgba(255,255,255,.35)}
+.lightbox .prev{left:18px}
+.lightbox .next{right:18px}
+.lightbox .close{position:fixed;top:12px;right:22px;font-size:40px;color:#fff;cursor:pointer;line-height:1;background:none;border:none;z-index:2001}"""
 
 
 # ---------------------------------------------------------------------------

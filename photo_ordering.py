@@ -174,10 +174,13 @@ def _direction_score(photos: list, order_idx: list, text: str) -> float:
 
 def _resolve_direction(photos: list, candidate: list, text: str) -> tuple:
     """
-    用文稿仲裁候选顺序的方向。
-    candidate: 候选索引列表（假定为"正向"）
-    text:      演讲稿全文
-    返回 (final_order_idx, note_suffix)
+    用文稿仲裁候选顺序的方向（带封面强先验，避免噪声误反转）。
+
+    规则：
+    1. 封面页必须在序列开头——若正向开头是封面而反向开头不是，
+       直接保持正向（封面是路演第一页，这是强先验）。
+    2. 只有反向得分明显更高（>20%）且反向开头也是封面时，才允许反转。
+    3. 其余情况均保持候选方向（文件名/倒计时给出的默认方向）。
     """
     fwd = candidate
     rev = list(reversed(candidate))
@@ -189,8 +192,15 @@ def _resolve_direction(photos: list, candidate: list, text: str) -> tuple:
     if score_fwd == 0 and score_rev == 0:
         return fwd, "（无文稿可校验，保持默认方向）"
 
-    # 反向得分明显更高（>5% 容差）→ 判定应反转
-    if score_rev > score_fwd * 1.05:
+    fwd_first_cover = bool(fwd) and _looks_like_cover(photos[fwd[0]])
+    rev_first_cover = bool(rev) and _looks_like_cover(photos[rev[0]])
+
+    # 强先验：正向开头是封面而反向开头不是 → 绝不反转
+    if fwd_first_cover and not rev_first_cover:
+        return fwd, "（文稿校验：封面在正向开头，保留方向）"
+
+    # 只有反向明显更好（>20%）且反向开头也是封面 → 才反转
+    if score_rev > score_fwd * 1.2 and rev_first_cover:
         return rev, "（文稿校验：反向与讲稿更吻合）"
     return fwd, "（文稿校验：正向与讲稿吻合）"
 

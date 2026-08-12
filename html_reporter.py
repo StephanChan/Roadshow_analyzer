@@ -233,7 +233,7 @@ section h2{{font-size:18px;color:#1e3a5f;border-left:4px solid #3b6ea5;padding-l
 .risk{{color:#c0392b}}.strength{{color:#27ae60}}.tip{{background:#eef7ee;border-left:4px solid #27ae60;padding:10px 14px;border-radius:6px;font-size:13px;margin-top:10px}}
 a.back{{display:inline-block;margin-bottom:14px;color:#3b6ea5;font-size:13px;text-decoration:none}}
 </style></head><body><div class="container">
-<a class="back" href="目录.html">← 返回项目总览</a>
+<a class="back" href="1目录.html">← 返回项目总览</a>
 <header><h1>{esc(proj_name)}</h1><div class="sub">路演学习分析报告｜照片 {photo_counts}张｜音频 {fmt_dur(speech.get("durationSec"))}</div></header>
 
 {photo_only_section}

@@ -13,7 +13,7 @@
 5. **演讲风格分析**：语速（字/分）、时长、总字数、过渡语、高频词 Top10
 6. **PPT 风格分析**：页数、路演结构分布、页面类型分布、数据页占比
 7. **商业化五维点评**：评分 + 五维雷达（赛道/壁垒/临床/商业/团队）+ 看点/短板/学习点
-8. **输出 HTML**：单项目报告 + 总览 index.html 横向对比表
+8. **输出 HTML**：单项目报告 + 总览 1目录.html 横向对比表
 
 支持三种模式：
 - **有音频**：转写 + 全部分析
@@ -33,7 +33,7 @@ roadshow_analyzer_py/
 ├── deepseek_client.py   # DeepSeek API 封装（重试/分段/JSON提取）
 ├── analyzer.py          # AI纠错/路演问答拆分/两种风格分析/商业化点评
 ├── html_reporter.py     # 单项目 HTML 报告生成
-├── index_builder.py     # 总览 index.html 生成
+├── index_builder.py     # 总览 1目录.html 生成
 ├── pipeline.py          # 单项目完整管线
 ├── main.py              # 主入口（Spyder F5 运行）
 ├── environment.yml      # Conda 一键环境（精确锁定全部版本，推荐）
@@ -257,12 +257,12 @@ python "d:\BaiduSyncdisk\南科大博后材料\抗癌药物筛选\26年医企创
 
 ```
 analysis_output\
-├── index.html                     ← 总览表格（用浏览器打开）
+├── 1目录.html                     ← 总览表格（用浏览器打开）
 ├── 项目名.html                    ← 每个项目的分析报告
 └── cache\项目名.json              ← 中间结果（AI纠错全文/图片分析/点评）
 ```
 
-浏览器打开 `analysis_output\index.html` 即可查看全部项目对比。
+浏览器打开 `analysis_output\1目录.html` 即可查看全部项目对比。
 
 ### 完整示例（复制可用，已处理跨盘符）
 

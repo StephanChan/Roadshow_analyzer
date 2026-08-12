@@ -179,15 +179,18 @@ def process_project(proj) -> dict | None:
         ppt_style = {"slideCount": len(photos), "structure": {}, "pageTypes": {}, "dataDensity": 0}
 
     # ---- 生成 HTML 报告 ----
-    # 有文字时，用"讲稿-图片对照"重排照片顺序（按 OCR 与讲稿语义匹配）
+    # 重排照片顺序（新策略：倒计时 > 文件名自动升降序 > 讲稿匹配兜底）
+    # 无论是否有文字都执行排序（仅图片模式同样需要按路演顺序展示）
     display_photos = photos
-    if has_text:
-        try:
-            display_photos = order_photos_by_text(photos, pitch, chunks)
-            print(f"  [排序] 已按讲稿内容重排 {len(display_photos)} 张图片（对应讲稿段落）")
-        except Exception as e:
-            print(f"  [警告] 图片排序失败，保持文件顺序: {e}")
-            display_photos = photos
+    try:
+        display_photos = order_photos_by_text(photos, pitch, chunks)
+        note = ""
+        if display_photos and display_photos[0].get("order_note"):
+            note = display_photos[0]["order_note"]
+        print(f"  [排序] 已重排 {len(display_photos)} 张图片（{note or '顺序'})")
+    except Exception as e:
+        print(f"  [警告] 图片排序失败，保持文件顺序: {e}")
+        display_photos = photos
 
     html = generate_project_html(proj.name, {
         "text": pitch,

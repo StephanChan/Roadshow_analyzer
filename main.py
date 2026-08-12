@@ -6,7 +6,7 @@
 在 Spyder 中直接运行（F5），或命令行执行：
     python main.py "D:\\某目录"     # 指定输入目录
 
-输出：输入目录/analysis_output/目录.html（总览目录页）+ 各项目报告HTML
+输出：输入目录/analysis_output/1目录.html（总览目录页）+ 各项目报告HTML
 """
 import argparse
 import sys
@@ -55,9 +55,9 @@ def main() -> None:
             print(f"[项目失败] {proj.name}: {e}")
             results.append(None)
 
-    # ---- 生成总览目录页（文件名：目录.html） ----
+    # ---- 生成总览目录页（文件名：1目录.html） ----
     index_html = build_index_html(results)
-    index_path = config.OUTPUT_DIR / "目录.html"
+    index_path = config.OUTPUT_DIR / "1目录.html"
     index_path.write_text(index_html, encoding="utf-8")
     print(f"\n✅ 全部完成！目录页已生成: {index_path}")
 

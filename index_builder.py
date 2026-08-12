@@ -62,7 +62,7 @@ def build_index_html(results: list) -> str:
     total = len([r for r in results if r])
 
     return f"""<!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><title>路演项目学习分析 - 总览</title>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>1目录 - 路演项目学习分析</title>
 <style>
 body{{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#f5f7fa;padding:30px}}
 h1{{color:#1e3a5f;text-align:center}}.sub{{text-align:center;color:#666;margin-bottom:24px}}
@@ -71,7 +71,7 @@ th{{background:#1e3a5f;color:#fff;padding:12px;font-size:13px;text-align:left}}
 td{{padding:12px;border-bottom:1px solid #eef2f7;font-size:13px;vertical-align:top}}
 tr:hover td{{background:#f0f4fa}}a{{color:#3b6ea5;text-decoration:none;font-weight:600}}
 </style></head><body>
-<h1>🏥 医企创业路演 - 学习分析平台</h1>
+<h1>📋 1目录｜医企创业路演 - 学习分析平台</h1>
 <p class="sub">共 {total} 个项目｜评分 / 五维雷达 / 演讲风格 / PPT风格</p>
 <table><thead><tr><th>#</th><th>项目</th><th>评分</th><th>犀利点评</th><th>五维</th><th>PPT数</th><th>语速</th></tr></thead>
 <tbody>{rows_html}</tbody></table>

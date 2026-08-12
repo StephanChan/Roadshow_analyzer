@@ -22,6 +22,55 @@ from pipeline import process_project
 from scanner import ensure_dirs, scan_projects
 
 
+# ---------------------------------------------------------------------------
+# 环境自检：确保关键依赖可用（避免在错误的 Python 环境运行）
+# ---------------------------------------------------------------------------
+def _check_dependencies() -> None:
+    """
+    启动时检查运行环境是否完整：
+    1. pytesseract（OCR 必需）
+    2. Tesseract OCR 软件本体
+    若缺失则打印醒目中文提示，退出前告知用户应激活的正确环境。
+    """
+    missing = []
+
+    # 1. pytesseract Python 包
+    try:
+        import pytesseract  # noqa: F401
+    except ImportError:
+        missing.append("pytesseract（Python 包）")
+
+    # 2. Tesseract OCR 软件本体
+    if "pytesseract" not in missing:
+        try:
+            import pytesseract
+            pytesseract.pytesseract.tesseract_cmd = config.TESSERACT_CMD
+            pytesseract.get_tesseract_version()
+        except Exception:
+            missing.append("Tesseract OCR 软件（tesseract.exe）")
+
+    if missing:
+        print("\n" + "=" * 60)
+        print("❌ 环境自检未通过！缺少以下组件：")
+        for m in missing:
+            print(f"   - {m}")
+        print("=" * 60)
+        print("\n当前运行的 Python 是:")
+        print(f"  {sys.executable}")
+        print("\n最常见原因是【没有激活项目专用的 conda 环境】。")
+        print("正确做法：")
+        print("  1. 打开【Anaconda Prompt】")
+        print("  2. 先激活环境:  conda activate roadshow_analyzer")
+        print("     （注意：提示符应从 (base) 变成 (roadshow_analyzer)）")
+        print(f"  3. 再运行:      python \"{Path(__file__).resolve()}\" \"D:\\要分析的文件夹\"")
+        print("\n如果已经激活环境仍缺依赖，执行修复命令：")
+        print("  conda activate roadshow_analyzer")
+        print("  pip install pytesseract==0.3.10 pillow==10.3.0")
+        print("  （并确认已安装 Tesseract OCR 软件：https://github.com/UB-Mannheim/tesseract/wiki）")
+        print("=" * 60 + "\n")
+        sys.exit(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="路演学习分析平台（Python版）")
     parser.add_argument("input_dir", nargs="?", default=None,
@@ -35,6 +84,9 @@ def main() -> None:
             print(f"错误: 输入目录不存在: {config.INPUT_DIR}")
             sys.exit(1)
     config.OUTPUT_DIR = config.INPUT_DIR / "analysis_output"
+
+    # 环境自检（必须有 pytesseract 才能识别图片）
+    _check_dependencies()
 
     ensure_dirs()
     print("===== 路演学习分析平台（Python版） =====")

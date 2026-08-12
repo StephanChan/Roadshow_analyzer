@@ -74,14 +74,19 @@ cd /d "你的项目路径\roadshow_analyzer_py"
 python "main.py" "你要分析的文件夹路径"
 ```
 
+**重要：激活后命令行提示符应从 `(base)` 变成 `(roadshow_analyzer)`。**
+若仍是 `(base)`，说明激活失败，此时运行会报"缺少 pytesseract 依赖"——因为 base 环境没有安装项目需要的包。
+
 验证您的 `python` 是否正确（应显示 conda 环境路径而非 WindowsApps）：
 
 ```bat
 where python
 ```
 
-若输出含 `C:\Users\...\.conda\envs\roadshow_analyzer\python.exe` 则正常；
-若显示 `C:\Users\...\AppData\Local\Microsoft\WindowsApps\python.exe`，说明用的是存根，请改用 Anaconda Prompt。
+若输出含 `C:\ProgramData\anaconda3\python.exe` 说明还在 base 环境，请先 `conda activate roadshow_analyzer`；
+若显示 `C:\Users\...\AppData\Local\Microsoft\WindowsApps\python.exe`，说明用的是微软商店存根，请改用 Anaconda Prompt。
+
+> 程序启动时会自动做环境自检：若缺 pytesseract 或 Tesseract，会立即弹出醒目中文提示并告知正确的激活命令，不会等到处理图片时才报错。
 
 ---
 

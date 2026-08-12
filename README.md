@@ -58,6 +58,33 @@ roadshow_analyzer_py/
 
 ---
 
+## ⚠️ 重要：运行方式说明（避免"没反应"）
+
+**请不要在 PowerShell / CMD 直接输入 `python` 运行本程序！**
+
+Windows 的 PowerShell 中 `python` 命令很可能指向 **Microsoft Store 的 Python 存根**
+（路径 `C:\Users\你的用户名\AppData\Local\Microsoft\WindowsApps\python.exe`，
+文件大小 0 字节）——输入后不是运行程序，而是打开微软商店的 Python 安装页面，看起来"没有反应"。
+
+**正确做法：必须使用 Anaconda Prompt 运行**（开始菜单 → 搜索 → Anaconda Prompt）：
+
+```bat
+conda activate roadshow_analyzer
+cd /d "你的项目路径\roadshow_analyzer_py"
+python "main.py" "你要分析的文件夹路径"
+```
+
+验证您的 `python` 是否正确（应显示 conda 环境路径而非 WindowsApps）：
+
+```bat
+where python
+```
+
+若输出含 `C:\Users\...\.conda\envs\roadshow_analyzer\python.exe` 则正常；
+若显示 `C:\Users\...\AppData\Local\Microsoft\WindowsApps\python.exe`，说明用的是存根，请改用 Anaconda Prompt。
+
+---
+
 ## 环境准备
 
 ### 1. 安装 Python 依赖（提供两种精确锁定版本方式）

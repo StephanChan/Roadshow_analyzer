@@ -30,6 +30,18 @@
 
 下面一步步教您怎么装。
 
+【非常重要！先读这里】
+Windows 的 PowerShell/CMD 里输入 python，很可能打开的是"微软商店的
+Python 存根"（一个 0 字节的假文件），输入后不是运行程序，而是弹出
+Microsoft Store 的界面，看起来"没有任何反应"。
+
+所以本说明所有用到 python 的地方，都要求您：
+  1. 从"开始菜单"打开【Anaconda Prompt】（黑色命令行窗口）
+  2. 在 Anaconda Prompt 里先执行：conda activate roadshow_analyzer
+  3. 然后再输入 python 相关命令
+
+注意：直接在普通的 PowerShell / CMD / 终端 里输入 python 是不行的！
+
 
 三、第 1 步：安装 Anaconda
 -----------------------------------------------------------------------

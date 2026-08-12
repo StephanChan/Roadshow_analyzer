@@ -1,0 +1,37 @@
+# ============================================
+# 大文件 / 模型 / 缓存（无需上传，可在线下载）
+# ============================================
+
+# Whisper 语音识别模型（约 3GB，可通过 download_model.py 重新下载）
+models/
+
+# 临时缓存目录
+cache/
+
+# 分析输出目录（在输入目录下生成，不入库）
+analysis_output/
+output/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 敏感信息（API Key 等）
+.env
+.env.local
+_secrets.py
+*.key
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.wav
+*.log

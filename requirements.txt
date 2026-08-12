@@ -1,0 +1,43 @@
+# 路演分析平台 Python 版 - 依赖清单（精确锁定版本）
+#
+# 安装方式一（推荐，全部精确锁定）：
+#   pip install -r requirements.txt
+#
+# 安装方式二（Conda 用户）：
+#   conda env create -f environment.yml
+
+# ==================== 必需依赖 ====================
+
+# setuptools：ctranslate2（faster-whisper 底层）依赖其 pkg_resources 模块。
+# Python 3.12+ / 新 conda 环境默认不捆绑 setuptools，缺失会报
+# "ModuleNotFoundError: No module named 'pkg_resources'"
+setuptools==69.5.1
+
+# 语音转录（faster-whisper，基于 CTranslate2，CPU int8 量化可跑）
+faster-whisper==1.0.3
+# faster-whisper 底层推理引擎及传递依赖（精确锁定，保证可复现）
+ctranslate2==4.4.0
+tokenizers==0.19.1
+huggingface-hub==0.24.0
+onnxruntime==1.18.1
+av==12.2.0
+tqdm==4.66.4
+safetensors==0.4.4
+filelock==3.15.1
+regex==2024.5.15
+
+# 科学计算 / 网络
+numpy==1.26.4
+requests==2.32.3
+Pillow==10.3.0
+
+# OCR（pytesseract 是 Python 封装，还需单独安装 tesseract.exe 本体）
+pytesseract==0.3.13
+
+# ==================== 可选依赖 ====================
+
+# 繁简转换（补充 AI 纠错；不装也能跑，纠错由 DeepSeek 提示词完成）
+# opencc-python-reimplemented==0.1.7
+
+# 中文分词（增强高频词统计；不装也能跑）
+# jieba==0.42.1

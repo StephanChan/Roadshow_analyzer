@@ -14,6 +14,7 @@ tesseract.exe 底层（C++ std::filesystem）在 Windows 上遇到含中文/非 
                    注意：不要用 --tessdata-dir "带引号路径" 参数（引号会被 tesseract
                    当作路径的一部分，导致 Error opening data file）。只用环境变量。
 """
+import concurrent.futures
 import os
 import re
 import shutil
@@ -22,6 +23,10 @@ import uuid
 from pathlib import Path
 
 import config
+
+# 单张图片 OCR 超时时间（秒）：tesseract 遇大图/复杂图可能长时间无响应，
+# 超时后视为识别失败返回空串，避免整个管线卡死
+OCR_TIMEOUT_SECONDS = 60.0
 
 
 # ---------------------------------------------------------------------------
@@ -123,10 +128,24 @@ def _to_ascii_temp_path(img_path: Path) -> Path:
     return tmp_file
 
 
+def _ocr_inner(args: tuple) -> str:
+    """在线程中执行实际 OCR（供超时控制用）"""
+    pytesseract, tmp_img_str = args
+    raw = pytesseract.image_to_string(tmp_img_str, lang="chi_sim")
+    lines = [
+        ln.strip()
+        for ln in raw.split("\n")
+        if ln.strip() and len(ln.strip()) > 1 and _KEEP_RE.search(ln)
+    ]
+    return " | ".join(lines)[:300]
+
+
 def ocr_image(img_path: Path | str) -> str:
     """
     识别单张图片，返回清理后的 OCR 文本（单行 ' | ' 连接，截断 300 字）
-    识别失败时返回空字符串（与 JS 版 catch 返回 '' 一致）
+    识别失败/超时时返回空字符串（与 JS 版 catch 返回 '' 一致）
+
+    新增：OCR 超时保护（默认 60 秒），避免 tesseract 卡死拖垮整个管线。
     """
     img_path = Path(img_path)
     tmp_img = None
@@ -145,14 +164,14 @@ def ocr_image(img_path: Path | str) -> str:
         # 规避图片中文路径：复制到纯英文临时路径
         tmp_img = _to_ascii_temp_path(img_path)
 
-        raw = pytesseract.image_to_string(str(tmp_img), lang="chi_sim")
-
-        lines = [
-            ln.strip()
-            for ln in raw.split("\n")
-            if ln.strip() and len(ln.strip()) > 1 and _KEEP_RE.search(ln)
-        ]
-        return " | ".join(lines)[:300]
+        # 在线程池中执行 OCR，并设置超时（防止 tesseract 无响应卡死）
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(_ocr_inner, (pytesseract, str(tmp_img)))
+            try:
+                return future.result(timeout=OCR_TIMEOUT_SECONDS)
+            except concurrent.futures.TimeoutError:
+                print(f"    [OCR超时] {img_path.name} 超过 {OCR_TIMEOUT_SECONDS}s 未完成，跳过")
+                return ""
     except Exception as e:
         print(f"    [OCR失败] {img_path.name}: {e}")
         return ""

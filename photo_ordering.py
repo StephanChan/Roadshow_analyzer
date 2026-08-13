@@ -148,14 +148,15 @@ def _split_text_segments(text: str, n: int) -> list:
 # ---------------------------------------------------------------------------
 # 文稿方向仲裁
 # ---------------------------------------------------------------------------
-def _direction_score(photos: list, order_idx: list, text: str) -> float:
+def _direction_score(photos: list, order_idx: list, text: str) -> tuple:
     """
     按给定顺序计算"图片 OCR 与文稿分段"的整体语义匹配总分。
-    分数越高说明该顺序与文稿叙述顺序越吻合。
+    返回 (total_score, matched_count)：分数越高说明越吻合；
+    matched_count 表示有多少张图的 OCR 与对应讲稿段有实际匹配。
     """
     n = len(order_idx)
     if n < 2 or not text:
-        return 0.0
+        return 0.0, 0
 
     segments = _split_text_segments(text, n)
     seg_tokens = [_tokenize(s) for s in segments]
@@ -169,38 +170,33 @@ def _direction_score(photos: list, order_idx: list, text: str) -> float:
             total += sc
             if sc > 0:
                 matched += 1
-    return total
+    return total, matched
 
 
 def _resolve_direction(photos: list, candidate: list, text: str) -> tuple:
     """
-    用文稿仲裁候选顺序的方向（带封面强先验，避免噪声误反转）。
+    用文稿仲裁候选顺序的方向（超高阈值版）。
 
-    规则：
-    1. 封面页必须在序列开头——若正向开头是封面而反向开头不是，
-       直接保持正向（封面是路演第一页，这是强先验）。
-    2. 只有反向得分明显更高（>20%）且反向开头也是封面时，才允许反转。
-    3. 其余情况均保持候选方向（文件名/倒计时给出的默认方向）。
+    原则：OCR 噪声较大（常 300 字截断），关键词与长讲稿段的随机 Dice
+    重合度高（"AI/器官/项目"等高词频会让反向得分虚高）。实测 AI器官芯片
+    反向/正向=1.59，但文件名升序才是正确顺序——说明方向仲裁的分辨力有限。
+
+    因此只在"决定性证据"（反向得分 ≥ 正向 3 倍）时才允许反转，
+    默认信任文件名/倒计时给出的候选方向。3 倍几乎不可能被随机噪声触发，
+    却能捕获真正"整段讲稿顺序与图片正好相反"的极端情况。
     """
     fwd = candidate
     rev = list(reversed(candidate))
 
-    score_fwd = _direction_score(photos, fwd, text)
-    score_rev = _direction_score(photos, rev, text)
+    score_fwd, _ = _direction_score(photos, fwd, text)
+    score_rev, _ = _direction_score(photos, rev, text)
 
     # 无文稿或双方都匹配不到 → 保持候选方向
     if score_fwd == 0 and score_rev == 0:
         return fwd, "（无文稿可校验，保持默认方向）"
 
-    fwd_first_cover = bool(fwd) and _looks_like_cover(photos[fwd[0]])
-    rev_first_cover = bool(rev) and _looks_like_cover(photos[rev[0]])
-
-    # 强先验：正向开头是封面而反向开头不是 → 绝不反转
-    if fwd_first_cover and not rev_first_cover:
-        return fwd, "（文稿校验：封面在正向开头，保留方向）"
-
-    # 只有反向明显更好（>20%）且反向开头也是封面 → 才反转
-    if score_rev > score_fwd * 1.2 and rev_first_cover:
+    # 仅当反向得分是正向 3 倍以上（决定性证据）→ 才反转
+    if score_rev > score_fwd * 3.0:
         return rev, "（文稿校验：反向与讲稿更吻合）"
     return fwd, "（文稿校验：正向与讲稿吻合）"
 

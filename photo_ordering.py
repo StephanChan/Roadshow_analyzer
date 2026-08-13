@@ -175,29 +175,33 @@ def _direction_score(photos: list, order_idx: list, text: str) -> tuple:
 
 def _resolve_direction(photos: list, candidate: list, text: str) -> tuple:
     """
-    用文稿仲裁候选顺序的方向（超高阈值版）。
+    用文稿仲裁候选顺序的方向（文稿最终决定）。
 
-    原则：OCR 噪声较大（常 300 字截断），关键词与长讲稿段的随机 Dice
-    重合度高（"AI/器官/项目"等高词频会让反向得分虚高）。实测 AI器官芯片
-    反向/正向=1.59，但文件名升序才是正确顺序——说明方向仲裁的分辨力有限。
+    原则：文件名/倒计时只是"候选"，方向由文稿最终拍板：
+    - 把讲稿按时间切成与图片数相同的段，正向/反向分别计算
+      "图片 OCR 与对应讲稿段"的匹配总分；
+    - 哪个方向得分高，就用哪个方向（这正是用户要求的
+      "文稿只决定到底要不要反过来"）。
 
-    因此只在"决定性证据"（反向得分 ≥ 正向 3 倍）时才允许反转，
-    默认信任文件名/倒计时给出的候选方向。3 倍几乎不可能被随机噪声触发，
-    却能捕获真正"整段讲稿顺序与图片正好相反"的极端情况。
+    防噪声保护：若反向更高但匹配到的图片数不过半（说明正向其实
+    也有匹配、只是某几页碰巧更吻合），则保持候选方向，避免单页
+    随机重合造成误反转。
     """
     fwd = candidate
     rev = list(reversed(candidate))
 
-    score_fwd, _ = _direction_score(photos, fwd, text)
-    score_rev, _ = _direction_score(photos, rev, text)
+    score_fwd, matched_fwd = _direction_score(photos, fwd, text)
+    score_rev, matched_rev = _direction_score(photos, rev, text)
 
     # 无文稿或双方都匹配不到 → 保持候选方向
     if score_fwd == 0 and score_rev == 0:
         return fwd, "（无文稿可校验，保持默认方向）"
 
-    # 仅当反向得分是正向 3 倍以上（决定性证据）→ 才反转
-    if score_rev > score_fwd * 3.0:
+    n = len(fwd)
+    # 反向更高且匹配图数过半 → 文稿判定应反转
+    if score_rev > score_fwd and matched_rev > n / 2:
         return rev, "（文稿校验：反向与讲稿更吻合）"
+    # 正向更高或反向匹配不足 → 保持候选方向
     return fwd, "（文稿校验：正向与讲稿吻合）"
 
 

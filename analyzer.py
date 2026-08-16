@@ -156,6 +156,56 @@ def analyze_ppt_style(photo_analyses: list) -> dict:
 
 
 # ===========================================================================
+# 学术报告点评（学术质量评审，不点评商业化）
+# ===========================================================================
+def academic_review(proj_name: str, text: str, photo_themes: list = None) -> dict:
+    """
+    针对学术报告做学术质量五维评审：
+    返回 dict（rating/five_dimensions/summary/key_strengths/key_risks/learn_tips）
+    失败时返回 fallback
+    """
+    post_it = (text or "")[:5000]
+    photo_summary = "; ".join(photo_themes or [])[:20 * 40]
+
+    prompt = f"""请针对以下学术报告做学术质量评审，输出JSON：
+{{
+  "rating": 1-5的整数评分,
+  "five_dimensions": {{"创新性": 1-5, "方法严谨性": 1-5, "数据充分性": 1-5, "结论合理性": 1-5, "表达清晰度": 1-5}},
+  "summary": "150字以内的犀利评审（直指研究的创新点/方法缺陷/数据支撑/结论过度推演等）",
+  "key_strengths": ["2-3个学术亮点"],
+  "key_risks": ["2-3个学术短板（方法/数据/论证逻辑问题）"],
+  "learn_tips": "从这份学术报告中值得学习的一点（研究设计/论证逻辑/图表表达）"
+}}
+
+【评审严谨性要求 —— 必须遵守】
+1. 这是学术报告而非商业路演，【不要评审商业化可行性】（用户明确不需要）；
+   不要提"商业模式/市场规模/付费方/融资"等话题。
+2. 重点评审：研究问题是否有价值、方法是否严谨、数据是否充分、
+   结论是否被数据支持（避免过度推演）、表达是否清晰。
+3. 每一条优缺点必须注明推断来源（来自报告内容 / PPT画面 / 学术常识）。
+4. 杜绝空泛模板结论："创新性一般""数据不足"等一律禁止，
+   要针对该报告的具体研究内容做点上的分析。
+
+项目：{proj_name}
+PPT页面主题：{photo_summary or '无照片'}
+报告内容（节选）：{post_it}
+只输出JSON。"""
+
+    try:
+        raw = call_api_retry(
+            [
+                {"role": "system", "content": "你是学术报告质量评审专家，严谨、直击要害。"},
+                {"role": "user", "content": prompt},
+            ],
+            {"temperature": 0.4, "maxTokens": 1500},
+        )
+        return extract_json(raw)
+    except Exception as e:
+        print(f"    [AI学术评审失败] {e}")
+        return {"rating": 3, "summary": "（AI学术评审生成失败）"}
+
+
+# ===========================================================================
 # 商业化五维点评
 # ===========================================================================
 def commercial_review(proj_name: str, text: str, photo_themes: list = None) -> dict:

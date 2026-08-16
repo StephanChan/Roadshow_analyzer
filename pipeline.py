@@ -12,8 +12,8 @@ from pathlib import Path
 from urllib.parse import quote
 
 import config
-from analyzer import (ai_fix, analyze_ppt_style, analyze_speech_style,
-                      commercial_review, split_qa)
+from analyzer import (academic_review, ai_fix, analyze_ppt_style,
+                      analyze_speech_style, commercial_review, split_qa)
 from html_reporter import generate_project_html
 from photo_analyzer import analyze_image
 from photo_ordering import order_photos_by_text
@@ -89,6 +89,12 @@ def process_project(proj) -> dict | None:
     chunks = []
     transcript_loaded = False  # 是否复用已有的 _全文 文稿
 
+    # 文稿类型识别（文件名约定，零配置）：
+    # - doc_loaded_name : 实际加载的文稿文件名（用于判断是否 AI 总结稿）
+    doc_loaded_name = ""
+    # - is_ai_summary : True = AI 总结稿（跳过 AI 纠错，标题用"AI总结"）
+    is_ai_summary = False
+
     # 优先检查：该文件夹是否已有保存的转录文稿（跳过转写与AI纠错）
     existing = _find_existing_transcript(proj)
     if existing:
@@ -96,6 +102,7 @@ def process_project(proj) -> dict | None:
         if doc:
             content_text = doc
             transcript_loaded = True
+            doc_loaded_name = existing.name
             print(f"  [来源] 复用已有文稿 {existing.name} ({len(doc)}字，跳过转写与纠错)")
 
     # 模式1：有音频 → 转写
@@ -108,6 +115,7 @@ def process_project(proj) -> dict | None:
         except Exception as e:
             print(f"  [转录失败] {e}")
             return None
+        doc_loaded_name = proj.audio_files[0]
         print(f"  [来源] 音频转写 ({len(content_text)}字)")
 
     # 模式2：无音频但有文稿 → 读取文稿
@@ -116,9 +124,18 @@ def process_project(proj) -> dict | None:
         doc = read_doc_file(doc_path)
         if doc:
             content_text = doc
+            doc_loaded_name = proj.doc_files[0]
             print(f"  [来源] 读取文稿 {proj.doc_files[0]} ({len(doc)}字)")
         else:
             print("  [警告] 文稿读取为空/不支持格式，按仅图片处理")
+
+    # 根据文件名判断是否为 AI 总结稿（文件名含"总结"/"summary"）
+    if doc_loaded_name:
+        lower = doc_loaded_name.lower()
+        is_ai_summary = any(k.lower() in lower for k in config.AI_SUMMARY_KEYS)
+
+    # 根据项目文件夹名判断是否为学术报告
+    is_academic = any(k in proj.name for k in config.ACADEMIC_REPORT_KEYS)
 
     # 模式3：无内容 → 仅图片
     if content_text is None:
@@ -146,9 +163,11 @@ def process_project(proj) -> dict | None:
     review = None
 
     if has_text:
-        if transcript_loaded:
-            # 已有纠错后的全文，直接使用，不再重复 AI 纠错
+        if transcript_loaded or is_ai_summary:
+            # 已有纠错后的全文，或 AI 总结稿：直接使用，不再重复 AI 纠错
             fixed_text = content_text
+            if is_ai_summary:
+                print(f"  [AI总结稿] 文稿已是整理后的总结，跳过 AI 纠错")
         else:
             # 新转录/新文稿：执行 AI 纠错
             fixed_text = content_text
@@ -169,9 +188,14 @@ def process_project(proj) -> dict | None:
         speech_style = analyze_speech_style(fixed_text, chunks)
         ppt_style = analyze_ppt_style(photos)
 
-        # 商业化点评（仅模式1/2有文字时）
+        # 点评：学术报告 → 学术质量评审；路演报告 → 商业化五维点评
         try:
-            review = commercial_review(proj.name, fixed_text, [p.get("theme") for p in photos])
+            if is_academic:
+                print(f"  [点评] 学术报告 → 学术质量评审")
+                review = academic_review(proj.name, fixed_text, [p.get("theme") for p in photos])
+            else:
+                print(f"  [点评] 路演报告 → 商业化五维分析")
+                review = commercial_review(proj.name, fixed_text, [p.get("theme") for p in photos])
         except Exception as e:
             print(f"  [AI点评失败] {e}")
     else:
@@ -200,6 +224,8 @@ def process_project(proj) -> dict | None:
         "pptStyle": ppt_style,
         "review": review,
         "hasText": has_text,
+        "isAiSummary": is_ai_summary,
+        "isAcademic": is_academic,
     })
     # 注：HTML 文件名使用项目中文原名（不用 urlencode）。
     # 若用百分号编码名保存，浏览器打开 index.html 时会自动解码链接中的 %XX，

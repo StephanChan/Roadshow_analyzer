@@ -139,6 +139,10 @@ def generate_project_html(proj_name: str, data: dict) -> str:
     ppt = data.get("pptStyle") or {}
     review = data.get("review") or {}
     has_text = data.get("hasText", False)
+    # 文稿类型：AI 总结稿（跳过纠错）→ 标题用"AI总结"
+    is_ai_summary = data.get("isAiSummary", False)
+    # 报告类型：学术报告 → 点评学术质量（非商业化）
+    is_academic = data.get("isAcademic", False)
 
     # ---- 照片网格（点击打开灯箱） ----
     photo_html = ""
@@ -189,9 +193,11 @@ def generate_project_html(proj_name: str, data: dict) -> str:
     )
 
     # ---- 全文段落 ----
+    # 段落小标题：AI 总结稿 → "🤖 AI总结内容"；现场演讲稿 → "🎤 路演部分"
+    pitch_title = "🤖 AI总结内容" if is_ai_summary else "🎤 路演部分"
     pitch_paras = paragraphs(data.get("text") or "")
     qa_paras = paragraphs(data.get("qa") or "")
-    text_html = '<h3 class="phase-title">🎤 路演部分</h3>\n'
+    text_html = f'<h3 class="phase-title">{pitch_title}</h3>\n'
     text_html += "\n".join(f"<p>{esc(p)}</p>" for p in pitch_paras)
     if data.get("qa"):
         text_html += '<h3 class="phase-title qa">💬 评委问答</h3>\n'
@@ -231,10 +237,12 @@ def generate_project_html(proj_name: str, data: dict) -> str:
     )
 
     # ---- 有文字时的段落 ----
+    # 点评标题：学术报告 → 学术质量评审；路演报告 → 商业化可行性与学习要点
+    review_title = "🎓 学术质量评审" if is_academic else "⭐ 商业化可行性与学习要点"
     review_section = ""
     if has_text:
         review_section = (
-            '<section><h2>⭐ 商业化可行性与学习要点</h2>\n'
+            f'<section><h2>{review_title}</h2>\n'
             '<div class="review-box"><p><b>评分：'
             + rating_full + rating_empty
             + '</b></p>\n<p>' + esc(review.get("summary") or "") + '</p></div>\n'
@@ -268,10 +276,12 @@ def generate_project_html(proj_name: str, data: dict) -> str:
             speech_section += f'<p><b>高频词：</b>{words_html}</p>\n'
         speech_section += "</section>"
 
+    # 全文标题：AI 总结稿 → "AI总结"；现场演讲稿 → "路演全文（AI纠错·分段）"
+    fulltext_title = "🤖 AI总结" if is_ai_summary else "📄 路演全文（AI纠错·分段）"
     fulltext_section = ""
     if has_text:
         fulltext_section = (
-            '<section><h2>📄 路演全文（AI纠错·分段）</h2>'
+            f'<section><h2>{fulltext_title}</h2>'
             f'<div class="fulltext">{text_html}</div></section>'
         )
 

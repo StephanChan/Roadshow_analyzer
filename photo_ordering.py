@@ -175,34 +175,29 @@ def _direction_score(photos: list, order_idx: list, text: str) -> tuple:
 
 def _resolve_direction(photos: list, candidate: list, text: str) -> tuple:
     """
-    用文稿仲裁候选顺序的方向（文稿最终决定）。
+    方向仲裁（默认降序优先，除非正序匹配优势极强）。
 
-    原则：文件名/倒计时只是"候选"，方向由文稿最终拍板：
-    - 把讲稿按时间切成与图片数相同的段，正向/反向分别计算
-      "图片 OCR 与对应讲稿段"的匹配总分；
-    - 哪个方向得分高，就用哪个方向（这正是用户要求的
-      "文稿只决定到底要不要反过来"）。
-
-    防噪声保护：若反向更高但匹配到的图片数不过半（说明正向其实
-    也有匹配、只是某几页碰巧更吻合），则保持候选方向，避免单页
-    随机重合造成误反转。
+    用户明确规则：
+    - 【默认】文件名降序（候选方向即降序）。
+    - 仅当 OCR 匹配度「正序（升序）比倒序（降序）高 3 倍」时，
+      才翻转为升序。
+    也就是说：文稿只在"决定性证据"下改变默认的降序方向。
     """
-    fwd = candidate
-    rev = list(reversed(candidate))
+    fwd = list(reversed(candidate))  # 正序 = 升序
+    rev = candidate                  # 倒序 = 降序 = 默认方向
 
     score_fwd, matched_fwd = _direction_score(photos, fwd, text)
     score_rev, matched_rev = _direction_score(photos, rev, text)
 
-    # 无文稿或双方都匹配不到 → 保持候选方向
+    # 无文稿或双方都匹配不到 → 保持默认降序
     if score_fwd == 0 and score_rev == 0:
-        return fwd, "（无文稿可校验，保持默认方向）"
+        return rev, "（无文稿可校验，保持默认降序）"
 
-    n = len(fwd)
-    # 反向更高且匹配图数过半 → 文稿判定应反转
-    if score_rev > score_fwd and matched_rev > n / 2:
-        return rev, "（文稿校验：反向与讲稿更吻合）"
-    # 正向更高或反向匹配不足 → 保持候选方向
-    return fwd, "（文稿校验：正向与讲稿吻合）"
+    # 仅当正序得分是倒序得分的 3 倍以上 → 才改为升序
+    if score_fwd > score_rev * 3.0:
+        return fwd, "（文稿校验：正序匹配优势极高，改为升序）"
+    # 其余情况保持默认降序
+    return rev, "（文稿校验：保持默认降序）"
 
 
 # ---------------------------------------------------------------------------
@@ -297,8 +292,9 @@ def order_photos_by_text(photos: list, text: str, chunks: list = None) -> list:
     else:
         # 文件名候选方向：有无数字？
         if any(_main_number(p.get("file", "")) is not None for p in photos):
-            candidate = _order_by_filename(photos, 1)  # 先按升序做候选
-            base_note = "文件名候选（默认升序）"
+            # 默认文件名【降序】（用户规则：默认降序，除非正序匹配高 3 倍）
+            candidate = _order_by_filename(photos, -1)
+            base_note = "文件名候选（默认降序）"
         else:
             # 文件名无数字 → 保持扫描顺序（无方向可仲裁）
             candidate = list(range(n))

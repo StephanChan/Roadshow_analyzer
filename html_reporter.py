@@ -34,7 +34,7 @@ def fmt_dur(sec) -> str:
 # 智能分段：按标点聚合为约 200-300 字的自然段落
 # ---------------------------------------------------------------------------
 def paragraphs(text: str) -> list:
-    """将全文按标点切句，聚合为约 240 字的自然段落"""
+    """将全文按标点切句，聚合为约 240 字的自然段落（用于口语演讲转写稿）"""
     if not text:
         return ["（暂无内容）"]
 
@@ -54,6 +54,72 @@ def paragraphs(text: str) -> list:
     if cur.strip():
         paras.append(cur.strip())
     return paras
+
+
+def paragraphs_preserve(text: str) -> list:
+    """
+    保留原始换行的分段（用于 AI 总结稿等已整理好的文稿）。
+
+    AI 总结稿在 txt 里已按主题/小节分好段落（空行或换行分隔），
+    直接照抄原文分段，避免 240 字重排破坏原有结构。
+    规则：
+    - 先按空行分段（如 \n\n）；若全文无空行，则按单个换行分段。
+    - 空行分段后仍有超长段落(>500字)，再按句号二次切分。
+    """
+    if not text:
+        return ["（暂无内容）"]
+
+    # 1) 优先按空行分段（\n\n 或 \r\n\r\n）
+    blocks = re.split(r"\n\s*\n", text)
+    if len(blocks) < 2:
+        # 2) 无空行时按单个换行分段
+        blocks = re.split(r"[\n\r]+", text)
+
+    paras = []
+    for b in blocks:
+        b = b.strip()
+        if not b:
+            continue
+        # 3) 超长段落（>500字）再按句号拆分，避免一页超大块
+        if len(b) > 500:
+            sentences = re.split(r"(?<=[。！？!?；;])", b)
+            cur = ""
+            for s in sentences:
+                s = s.strip()
+                if not s:
+                    continue
+                cur += s
+                if len(cur) >= 300 and cur.strip():
+                    paras.append(cur.strip())
+                    cur = ""
+            if cur.strip():
+                paras.append(cur.strip())
+        else:
+            paras.append(b)
+
+    # 4) 合并短标题行（≤30字且无句末标点，如 "# 技术方案"）到下一段，
+    #    还原"标题+正文"的小节结构：标题作为下一段开头
+    merged = []
+    pending_title = ""
+    for p in paras:
+        is_short_title = (
+            len(p) <= 30
+            and not re.search(r"[。．！？!?；;．.]\s*$", p)
+            and not re.search(r"[\u4e00-\u9fff]{6,}", p)  # 无长句（纯标题）
+        )
+        if is_short_title:
+            # 保存为待用标题，等下一段正文到来时拼接在开头
+            pending_title = p
+            continue
+        if pending_title:
+            merged.append(pending_title + "\n" + p)
+            pending_title = ""
+        else:
+            merged.append(p)
+    # 结尾残留的标题（无正文）也保留
+    if pending_title:
+        merged.append(pending_title)
+    return merged or ["（暂无内容）"]
 
 
 # ---------------------------------------------------------------------------
@@ -193,10 +259,13 @@ def generate_project_html(proj_name: str, data: dict) -> str:
     )
 
     # ---- 全文段落 ----
+    # 分段方式：AI 总结稿 → 保留原始换行（照抄 txt 分段）；
+    #           现场演讲稿 → 按 240 字重新聚合（口语没有换行）
+    pitch_paras = (paragraphs_preserve(data.get("text") or "")
+                   if is_ai_summary else paragraphs(data.get("text") or ""))
+    qa_paras = paragraphs(data.get("qa") or "")
     # 段落小标题：AI 总结稿 → "🤖 AI总结内容"；现场演讲稿 → "🎤 路演部分"
     pitch_title = "🤖 AI总结内容" if is_ai_summary else "🎤 路演部分"
-    pitch_paras = paragraphs(data.get("text") or "")
-    qa_paras = paragraphs(data.get("qa") or "")
     text_html = f'<h3 class="phase-title">{pitch_title}</h3>\n'
     text_html += "\n".join(f"<p>{esc(p)}</p>" for p in pitch_paras)
     if data.get("qa"):
